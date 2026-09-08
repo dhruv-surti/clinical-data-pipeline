@@ -17,11 +17,11 @@ load_dotenv()
 def load_trials(all_trials):
 
     conn = psycopg2.connect(
-        host = os.getenv("HOSTNAME"),
-        database = os.getenv("DB_NAME"),
-        user = os.getenv("DB_USER"),
-        password = os.getenv("DB_PASSWORD")
-
+    host=os.getenv("HOSTNAME"),
+    port=os.getenv("DB_PORT"),
+    database=os.getenv("DB_NAME"),
+    user=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASSWORD")
     )
 
     cursor = conn.cursor()

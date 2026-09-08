@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: stg_trials
+    description: "Cleaned staging view of raw clinical trial data pulled from ClinicalTrials.gov API."
+    columns:
+      - name: nct_id
+        description: "Unique identifier for each clinical trial (ClinicalTrials.gov ID)."
+        tests:
+          - unique
+          - not_null
+      - name: status
+        description: "Current recruitment/completion status of the trial."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['RECRUITING', 'COMPLETED', 'TERMINATED', 'UNKNOWN', 'ENROLLING_BY_INVITATION', 'ACTIVE_NOT_RECRUITING', 'NOT_YET_RECRUITING']
