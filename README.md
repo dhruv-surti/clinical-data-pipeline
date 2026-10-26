@@ -1,82 +1,53 @@
-# Clinical Trials Data Pipeline
+<div align="center">
+  <h1>Clinical Trials Idempotent ETL Pipeline</h1>
+  <p><strong>End-to-End Data Pipeline: Python, PostgreSQL, REST APIs, and dbt</strong></p>
+</div>
 
-A simple ETL pipeline that extracts clinical trial data from the public ClinicalTrials.gov API, transforms it into a clean flat structure, and loads it into a PostgreSQL database.
+<hr>
 
-## What it does
+<h3>Why I Built This</h3>
+<p>Working with live healthcare APIs often means dealing with deeply nested JSON formats and missing fields. For data teams in regulated industries, pipelines must be reliable, repeatable, and heavily tested to prevent data corruption or duplication.</p>
 
-- **Extract**: Pulls diabetes-related clinical trial records from the ClinicalTrials.gov API (v2)
-- **Transform**: Flattens deeply nested JSON into clean records, handling missing fields gracefully (e.g. observational trials with no phase, trials with unknown enrollment counts)
-- **Load**: Inserts records into a PostgreSQL database, using upserts (`ON CONFLICT DO UPDATE`) so the pipeline is safe to re-run without creating duplicates or crashing
+<p>I built this automated ETL pipeline to extract live diabetes clinical trial records directly from the <strong>ClinicalTrials.gov REST API (v2)</strong>, flatten the complex JSON structures, and safely load them into a PostgreSQL database. To ensure the data is analytics-ready and reliable, I integrated <strong>dbt (data build tool)</strong> for modular modeling and automated data quality testing.</p>
 
-## Why this project
+<hr>
 
-Built to demonstrate core data engineering skills relevant to regulated industries (pharma/healthcare), including handling messy real-world API data, data validation, and idempotent pipeline design, principles important for GxP-style compliance and audit-ready data systems.
+<h3>How the Pipeline Works</h3>
+<pre>
+[ClinicalTrials.gov API (REST v2)] 
+       │
+       ▼ (Python: extract.py & load.py)
+   [JSON Parsing & Safe Defaults]
+       │
+       ▼ (psycopg2: Idempotent ON CONFLICT DO UPDATE)
+[PostgreSQL Database] 
+       │
+       ▼ (dbt run & dbt test)
+[Staging & Mart Models]
+</pre>
 
-## Tech stack
+<hr>
 
-- Python (requests, psycopg2, python-dotenv)
-- PostgreSQL
-- ClinicalTrials.gov public API
+<h3>Key Engineering Decisions</h3>
 
-## Project structure
+<h4>1. Defensive Data Extraction (Python)</h4>
+<p>Healthcare data APIs are notoriously inconsistent. I engineered a Python ingestion script (<code>extract.py</code>) using the <code>requests</code> library to pull over 1,000+ live records. To prevent the pipeline from crashing on missing keys, I implemented defensive parsing using <code>.get()</code> with safe defaults when flattening the highly nested JSON responses.</p>
 
-```
-clinical-data-pipeline/
-├── extract.py       # Pulls and flattens trial data from the API
-├── load.py          # Loads records into PostgreSQL (upsert logic)
-├── main.py          # Runs the full pipeline end to end
-├── schema.sql        # Database table definition
-├── requirements.txt
-└── README.md
-```
+<h4>2. Idempotent Data Loading (PostgreSQL)</h4>
+<p>Pipelines should be safe to run multiple times without duplicating data or failing. Using <code>psycopg2</code> in my <code>load.py</code> script, I populated the PostgreSQL database using transactional upsert logic. By implementing <code>ON CONFLICT (nct_id) DO UPDATE</code>, the pipeline guarantees 100% idempotent and corruption-free data loads. Re-running the pipeline simply updates existing trial records with new API data.</p>
 
-## Setup
+<h4>3. Automated Data Quality & Modeling (dbt)</h4>
+<p>Instead of running raw SQL scripts for analytics, I integrated <strong>dbt</strong> to build a modern transformation layer. I constructed modular staging and mart models, and implemented <strong>4 automated test suites</strong>. These tests continuously validate strict data integrity checks, such as primary key uniqueness and null-value monitoring.</p>
 
-1. Clone the repo
-```bash
-git clone https://github.com/yourusername/clinical-data-pipeline.git
-cd clinical-data-pipeline
-```
+<h4>4. Secure Secrets Management</h4>
+<p>Security is paramount when handling database connections. All PostgreSQL database credentials and environment variables are securely stored in a <code>.env</code> file (via <code>python-dotenv</code>) and strictly excluded from version control.</p>
 
-2. Create a virtual environment and install dependencies
-```bash
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
+<hr>
 
-3. Create a `.env` file with your database credentials
-```
-HOSTNAME=localhost
-DB_NAME=clinical_trials
-DB_USER=your_username
-DB_PASSWORD=your_password
-```
-
-4. Create the database and table
-```bash
-psql -U your_username -c "CREATE DATABASE clinical_trials;"
-psql -U your_username -d clinical_trials -f schema.sql
-```
-
-## Usage
-
-Run the full pipeline:
-```bash
-python main.py
-```
-
-This extracts fresh data from the API, saves a raw JSON backup (`raw_trials.json`), and loads/updates records in PostgreSQL.
-
-## Key design decisions
-
-- **Idempotency**: Uses `ON CONFLICT (nct_id) DO UPDATE` so re-running the pipeline updates existing records instead of failing or duplicating data.
-- **Missing data handling**: Uses `.get()` with safe defaults (e.g. `None` for missing enrollment counts) instead of crashing on incomplete API responses, avoiding false/misleading placeholder values like `0`.
-- **Secrets management**: Database credentials are stored in a `.env` file, excluded from version control via `.gitignore`.
-
-## Future improvements
-
-- Incremental loading (only pull trials updated since last run)
-- Data validation layer (flag missing required fields, duplicate IDs)
-- Orchestration with Airflow (scheduled daily runs)
-- dbt models for further transformation/aggregation inside the warehouse
+<h3>Repository Structure</h3>
+<ul>
+  <li><code>main.py</code>: The master orchestration script that runs the extraction and loading processes.</li>
+  <li><code>extract.py</code>: Handles the REST API connection and defensive JSON flattening.</li>
+  <li><code>load.py</code>: Manages the PostgreSQL connection and executes the idempotent upsert logic.</li>
+  <li><code>/dbt/</code>: Contains the dbt project, including staging models, mart models, and the automated YAML test suites.</li>
+</ul>
